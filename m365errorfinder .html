@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>M365ErrorFinder</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #080B14;
+    --bg2: #0D1120;
+    --surface: rgba(255,255,255,0.04);
+    --surface-hover: rgba(255,255,255,0.07);
+    --border: rgba(255,255,255,0.08);
+    --border-hover: rgba(255,255,255,0.18);
+    --text: #F0F2F8;
+    --text-muted: #6B7494;
+    --text-dim: #3D4460;
+
+    --entra: #8B5CF6;
+    --entra-glow: rgba(139,92,246,0.25);
+    --intune: #3B82F6;
+    --intune-glow: rgba(59,130,246,0.25);
+    --exchange: #06B6D4;
+    --exchange-glow: rgba(6,182,212,0.25);
+    --autopilot: #6366F1;
+    --autopilot-glow: rgba(99,102,241,0.25);
+    --purview: #14B8A6;
+    --purview-glow: rgba(20,184,166,0.25);
+    --azure: #38BDF8;
+    --azure-glow: rgba(56,189,248,0.25);
+    --graph: #22D3EE;
+    --graph-glow: rgba(34,211,238,0.25);
+    --licensing: #F97316;
+    --licensing-glow: rgba(249,115,22,0.25);
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Ambient glow orbs */
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.4;
+  }
+  .orb-1 { width: 600px; height: 600px; top: -200px; left: -100px; background: radial-gradient(circle, rgba(99,102,241,0.3), transparent 70%); }
+  .orb-2 { width: 500px; height: 500px; bottom: -100px; right: -100px; background: radial-gradient(circle, rgba(6,182,212,0.2), transparent 70%); }
+  .orb-3 { width: 400px; height: 400px; top: 40%; left: 50%; transform: translate(-50%,-50%); background: radial-gradient(circle, rgba(139,92,246,0.15), transparent 70%); }
+
+  /* Nav */
+  nav {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 48px;
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+  }
+
+  .nav-logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 20px;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.6) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .nav-logo span {
+    background: linear-gradient(135deg, #8B5CF6, #38BDF8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 32px;
+    list-style: none;
+  }
+
+  .nav-links a {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 400;
+    transition: color 0.2s;
+    letter-spacing: 0.01em;
+  }
+
+  .nav-links a:hover { color: var(--text); }
+
+  .nav-badge {
+    background: rgba(139,92,246,0.15);
+    border: 1px solid rgba(139,92,246,0.3);
+    color: #A78BFA;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 100px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* Hero */
+  .hero {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 100px 24px 80px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .hero-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 100px;
+    padding: 6px 16px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 32px;
+  }
+
+  .hero-eyebrow .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #22D3EE;
+    box-shadow: 0 0 8px #22D3EE;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(48px, 7vw, 80px);
+    font-weight: 800;
+    line-height: 1.0;
+    letter-spacing: -3px;
+    margin-bottom: 24px;
+    color: #fff;
+  }
+
+  h1 .gradient-text {
+    background: linear-gradient(135deg, #8B5CF6 0%, #38BDF8 50%, #22D3EE 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-sub {
+    font-size: 18px;
+    color: var(--text-muted);
+    font-weight: 300;
+    line-height: 1.6;
+    max-width: 560px;
+    margin: 0 auto 48px;
+    letter-spacing: 0.01em;
+  }
+
+  /* Carousel */
+  .carousel-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-dim);
+    font-weight: 500;
+    margin-bottom: 14px;
+    animation: fadeUp 0.6s 0.15s ease both;
+  }
+
+  .carousel-outer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    max-width: 700px;
+    margin: 0 auto 36px;
+    animation: fadeUp 0.6s 0.2s ease both;
+  }
+
+  .code-pill {
+    display: inline-flex;
+    align-items: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 7px 14px;
+    border-radius: 100px;
+    border: 1px solid;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: transform 0.15s, box-shadow 0.15s;
+    cursor: pointer;
+    letter-spacing: 0.02em;
+  }
+
+  .code-pill:hover { transform: translateY(-2px); }
+
+  .code-pill.entra { background: rgba(139,92,246,0.1); border-color: rgba(139,92,246,0.25); color: #A78BFA; }
+  .code-pill.entra:hover { box-shadow: 0 4px 20px rgba(139,92,246,0.3); }
+
+  .code-pill.intune { background: rgba(59,130,246,0.1); border-color: rgba(59,130,246,0.25); color: #60A5FA; }
+  .code-pill.intune:hover { box-shadow: 0 4px 20px rgba(59,130,246,0.3); }
+
+  .code-pill.exchange { background: rgba(6,182,212,0.1); border-color: rgba(6,182,212,0.25); color: #22D3EE; }
+  .code-pill.exchange:hover { box-shadow: 0 4px 20px rgba(6,182,212,0.3); }
+
+  .code-pill.autopilot { background: rgba(99,102,241,0.1); border-color: rgba(99,102,241,0.25); color: #818CF8; }
+  .code-pill.autopilot:hover { box-shadow: 0 4px 20px rgba(99,102,241,0.3); }
+
+  .code-pill.purview { background: rgba(20,184,166,0.1); border-color: rgba(20,184,166,0.25); color: #2DD4BF; }
+  .code-pill.purview:hover { box-shadow: 0 4px 20px rgba(20,184,166,0.3); }
+
+  .code-pill.azure { background: rgba(56,189,248,0.1); border-color: rgba(56,189,248,0.25); color: #38BDF8; }
+  .code-pill.azure:hover { box-shadow: 0 4px 20px rgba(56,189,248,0.3); }
+
+  .code-pill.graph { background: rgba(34,211,238,0.1); border-color: rgba(34,211,238,0.25); color: #22D3EE; }
+  .code-pill.graph:hover { box-shadow: 0 4px 20px rgba(34,211,238,0.3); }
+
+  .code-pill.licensing { background: rgba(249,115,22,0.1); border-color: rgba(249,115,22,0.25); color: #FB923C; }
+  .code-pill.licensing:hover { box-shadow: 0 4px 20px rgba(249,115,22,0.3); }
+
+  /* Search bar */
+  .search-wrap {
+    position: relative;
+    max-width: 600px;
+    margin: 0 auto 16px;
+  }
+
+  .search-icon {
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-dim);
+    width: 18px;
+    height: 18px;
+    pointer-events: none;
+  }
+
+  .search-input {
+    width: 100%;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 18px 20px 18px 52px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    backdrop-filter: blur(12px);
+    letter-spacing: 0.02em;
+  }
+
+  .search-input::placeholder { color: var(--text-dim); font-family: 'DM Sans', sans-serif; font-size: 14px; letter-spacing: 0; }
+
+  .search-input:focus {
+    border-color: rgba(139,92,246,0.5);
+    background: rgba(255,255,255,0.07);
+    box-shadow: 0 0 0 4px rgba(139,92,246,0.1), inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+
+  .search-hint {
+    font-size: 12px;
+    color: var(--text-dim);
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.04em;
+    margin-top: 10px;
+  }
+
+  /* Divider */
+  .section-divider {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 48px 32px;
+  }
+
+  .section-divider span {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    white-space: nowrap;
+    font-weight: 500;
+  }
+
+  .divider-line {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Category grid */
+  .categories {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 48px 80px;
+  }
+
+  .cat-card {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    overflow: hidden;
+    text-decoration: none;
+    display: block;
+  }
+
+  .cat-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    opacity: 0;
+    transition: opacity 0.25s;
+  }
+
+  .cat-card:hover {
+    border-color: var(--border-hover);
+    background: var(--surface-hover);
+    transform: translateY(-3px);
+  }
+
+  .cat-card:hover::before { opacity: 1; }
+
+  /* Per-color glow on hover */
+  .cat-card.entra:hover { box-shadow: 0 8px 40px var(--entra-glow), 0 0 0 1px rgba(139,92,246,0.2); border-color: rgba(139,92,246,0.3); }
+  .cat-card.intune:hover { box-shadow: 0 8px 40px var(--intune-glow), 0 0 0 1px rgba(59,130,246,0.2); border-color: rgba(59,130,246,0.3); }
+  .cat-card.exchange:hover { box-shadow: 0 8px 40px var(--exchange-glow), 0 0 0 1px rgba(6,182,212,0.2); border-color: rgba(6,182,212,0.3); }
+  .cat-card.autopilot:hover { box-shadow: 0 8px 40px var(--autopilot-glow), 0 0 0 1px rgba(99,102,241,0.2); border-color: rgba(99,102,241,0.3); }
+  .cat-card.purview:hover { box-shadow: 0 8px 40px var(--purview-glow), 0 0 0 1px rgba(20,184,166,0.2); border-color: rgba(20,184,166,0.3); }
+  .cat-card.azure:hover { box-shadow: 0 8px 40px var(--azure-glow), 0 0 0 1px rgba(56,189,248,0.2); border-color: rgba(56,189,248,0.3); }
+  .cat-card.graph:hover { box-shadow: 0 8px 40px var(--graph-glow), 0 0 0 1px rgba(34,211,238,0.2); border-color: rgba(34,211,238,0.3); }
+  .cat-card.licensing:hover { box-shadow: 0 8px 40px var(--licensing-glow), 0 0 0 1px rgba(249,115,22,0.2); border-color: rgba(249,115,22,0.3); }
+
+  .cat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    font-size: 20px;
+  }
+
+  .entra .cat-icon { background: rgba(139,92,246,0.15); }
+  .intune .cat-icon { background: rgba(59,130,246,0.15); }
+  .exchange .cat-icon { background: rgba(6,182,212,0.15); }
+  .autopilot .cat-icon { background: rgba(99,102,241,0.15); }
+  .purview .cat-icon { background: rgba(20,184,166,0.15); }
+  .azure .cat-icon { background: rgba(56,189,248,0.15); }
+  .graph .cat-icon { background: rgba(34,211,238,0.15); }
+  .licensing .cat-icon { background: rgba(249,115,22,0.15); }
+
+  .cat-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 6px;
+    letter-spacing: -0.3px;
+  }
+
+  .cat-desc {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 300;
+    line-height: 1.5;
+    margin-bottom: 20px;
+  }
+
+  .cat-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .cat-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 100px;
+  }
+
+  .entra .cat-count { background: rgba(139,92,246,0.15); color: #A78BFA; }
+  .intune .cat-count { background: rgba(59,130,246,0.15); color: #60A5FA; }
+  .exchange .cat-count { background: rgba(6,182,212,0.15); color: #22D3EE; }
+  .autopilot .cat-count { background: rgba(99,102,241,0.15); color: #818CF8; }
+  .purview .cat-count { background: rgba(20,184,166,0.15); color: #2DD4BF; }
+  .azure .cat-count { background: rgba(56,189,248,0.15); color: #38BDF8; }
+  .graph .cat-count { background: rgba(34,211,238,0.15); color: #22D3EE; }
+  .licensing .cat-count { background: rgba(249,115,22,0.15); color: #FB923C; }
+
+  .cat-arrow {
+    color: var(--text-dim);
+    font-size: 18px;
+    transition: transform 0.2s, color 0.2s;
+  }
+
+  .cat-card:hover .cat-arrow { transform: translateX(4px); color: var(--text-muted); }
+
+  /* Bottom bar decoration */
+  .cat-card .color-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    opacity: 0;
+    transition: opacity 0.25s;
+    border-radius: 0 0 20px 20px;
+  }
+
+  .entra .color-bar { background: linear-gradient(90deg, transparent, #8B5CF6, transparent); }
+  .intune .color-bar { background: linear-gradient(90deg, transparent, #3B82F6, transparent); }
+  .exchange .color-bar { background: linear-gradient(90deg, transparent, #06B6D4, transparent); }
+  .autopilot .color-bar { background: linear-gradient(90deg, transparent, #6366F1, transparent); }
+  .purview .color-bar { background: linear-gradient(90deg, transparent, #14B8A6, transparent); }
+  .azure .color-bar { background: linear-gradient(90deg, transparent, #38BDF8, transparent); }
+  .graph .color-bar { background: linear-gradient(90deg, transparent, #22D3EE, transparent); }
+  .licensing .color-bar { background: linear-gradient(90deg, transparent, #F97316, transparent); }
+
+  .cat-card:hover .color-bar { opacity: 1; }
+
+  /* Stats row */
+  .stats {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 48px;
+    padding: 0 48px 80px;
+    border-top: 1px solid var(--border);
+    max-width: 1200px;
+    margin: 0 auto;
+    padding-top: 48px;
+  }
+
+  .stat {
+    text-align: center;
+  }
+
+  .stat-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 36px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #fff, rgba(255,255,255,0.5));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -1px;
+    margin-bottom: 4px;
+  }
+
+  .stat-label {
+    font-size: 13px;
+    color: var(--text-dim);
+    font-weight: 400;
+    letter-spacing: 0.04em;
+  }
+
+  .stat-divider {
+    width: 1px;
+    height: 40px;
+    background: var(--border);
+  }
+
+  /* Footer */
+  footer {
+    position: relative;
+    z-index: 1;
+    border-top: 1px solid var(--border);
+    padding: 24px 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .footer-left {
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+
+  .footer-left a {
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .footer-left a:hover { color: var(--text); }
+
+  .footer-right {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.06em;
+  }
+
+  /* Animate in */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .hero-eyebrow { animation: fadeUp 0.6s ease both; }
+  h1 { animation: fadeUp 0.6s 0.1s ease both; }
+  .hero-sub { animation: fadeUp 0.6s 0.2s ease both; }
+  .search-wrap { animation: fadeUp 0.6s 0.3s ease both; }
+  .search-hint { animation: fadeUp 0.6s 0.35s ease both; }
+  .section-divider { animation: fadeUp 0.6s 0.4s ease both; }
+  .cat-card { animation: fadeUp 0.5s ease both; }
+  .cat-card:nth-child(1) { animation-delay: 0.45s; }
+  .cat-card:nth-child(2) { animation-delay: 0.5s; }
+  .cat-card:nth-child(3) { animation-delay: 0.55s; }
+  .cat-card:nth-child(4) { animation-delay: 0.6s; }
+  .cat-card:nth-child(5) { animation-delay: 0.65s; }
+  .cat-card:nth-child(6) { animation-delay: 0.7s; }
+  .cat-card:nth-child(7) { animation-delay: 0.75s; }
+  .cat-card:nth-child(8) { animation-delay: 0.8s; }
+
+  @media (max-width: 768px) {
+    nav { padding: 16px 24px; }
+    .nav-links { display: none; }
+    .hero { padding: 64px 24px 48px; }
+    .categories { padding: 0 24px 48px; grid-template-columns: 1fr 1fr; }
+    .stats { gap: 24px; padding: 32px 24px; }
+    .stat-num { font-size: 28px; }
+    footer { padding: 20px 24px; flex-direction: column; gap: 8px; text-align: center; }
+    .section-divider { padding: 0 24px 24px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+
+<nav>
+  <div class="nav-logo">M365<span>ErrorFinder</span></div>
+  <ul class="nav-links">
+    <li><a href="#">Browse</a></li>
+    <li><a href="#">Categories</a></li>
+    <li><a href="#">About</a></li>
+  </ul>
+  <div class="nav-badge">v1.0</div>
+</nav>
+
+<section class="hero">
+  <div class="hero-eyebrow">
+    <span class="dot"></span>
+    Microsoft 365 Error Reference
+  </div>
+  <h1>Stop googling.<br><span class="gradient-text">Start fixing.</span></h1>
+  <div class="carousel-label">Commonly seen in the field</div>
+  <div class="carousel-outer">
+      <a class="code-pill entra" href="#">AADSTS53000</a>
+      <a class="code-pill intune" href="#">0x80180014</a>
+      <a class="code-pill exchange" href="#">550 5.1.1</a>
+      <a class="code-pill autopilot" href="#">0x800705b4</a>
+      <a class="code-pill entra" href="#">AADSTS50126</a>
+      <a class="code-pill intune" href="#">0x8018002a</a>
+      <a class="code-pill entra" href="#">AADSTS700016</a>
+      <a class="code-pill exchange" href="#">451 4.7.0</a>
+      <a class="code-pill autopilot" href="#">0x80070774</a>
+      <a class="code-pill licensing" href="#">License_ForProductIsNotAvailable</a>
+      <a class="code-pill graph" href="#">403 Forbidden</a>
+      <a class="code-pill purview" href="#">DLP_Policy_Tip_Block</a>
+      <a class="code-pill azure" href="#">AuthorizationFailed</a>
+      <a class="code-pill entra" href="#">AADSTS65001</a>
+      <a class="code-pill intune" href="#">0x87D1041C</a>
+  </div>
+
+  <p class="hero-sub">Plain-English explanations for every Microsoft 365, Entra, Intune, and Azure error code. Built for technicians. Readable by anyone.</p>
+
+  <div class="search-wrap">
+    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+    </svg>
+    <input class="search-input" type="text" placeholder="Paste an error code — AADSTS50126, 0x80180014...">
+  </div>
+  <p class="search-hint">Try: AADSTS53000 &nbsp;·&nbsp; 0x800705b4 &nbsp;·&nbsp; 550 5.1.1</p>
+</section>
+
+<div class="section-divider">
+  <span>Browse by product</span>
+  <div class="divider-line"></div>
+</div>
+
+<div class="categories">
+
+  <a class="cat-card entra" href="#">
+    <div class="cat-icon">🔐</div>
+    <div class="cat-name">Entra ID</div>
+    <div class="cat-desc">Sign-in failures, Conditional Access blocks, MFA issues, token errors</div>
+    <div class="cat-footer">
+      <span class="cat-count">142 codes</span>
+      <span class="cat-arrow">→</span>
+    </div>
+    <div class="color-bar"></div>
+  </a>
+
+  <a class="cat-card intune" href="#">
+    <div class="cat-icon">📱</div>
+    <div class="cat-name">Intune</div>
+    <div class="cat-desc">Device enrollment, compliance, policy deployment, app management</div>
+    <div class="cat-footer">
+      <span class="cat-count">98 codes</span>
+      <span class="cat-arrow">→</span>
+    </div>
+    <div class="color-bar"></div>
+  </a>
+
+  <a class="cat-card exchange" href="#">
+    <div class="cat-icon">✉️</div>
+    <div class="cat-name">Exchange</div>
+    <div class="cat-desc">Mail flow errors, delivery failures, NDRs, connector issues</div>
+    <div class="cat-footer">
+      <span class="cat-count">76 codes</span>
+      <span class="cat-arrow">→</span>
+    </div>
+    <div class="color-bar"></div>
+  </a>
+
+  <a class="cat-card autopilot" href="#">
+    <div class="cat-icon">🚀</div>
+    <div class="cat-name">Autopilot</div>
+    <div class="cat-desc">Provisioning failures, profile issues, OOBE errors, enrollment timeouts</div>
+    <div class="cat-footer">
+      <span class="cat-count">54 codes</span>
+      <span class="cat-arrow">→</span>
+    </div>
+    <div class="color-bar"></div>
+  </a>
+
+  <a class="cat-card purview" href="#">
+    <div class="cat-icon">🛡️</div>
+    <div class="cat-name">Purview</div>
+    <div class="cat-desc">DLP policy violations, sensitivity labels, compliance errors</div>
+    <div class="cat-footer">
+      <span class="cat-count">41 codes</span>
+      <span class="cat-arrow">→</span>
+    </div>
+    <div class="color-bar"></div>
+  </a>
+
+  <a class="cat-card azure" href="#">
+    <div class="cat-icon">☁️</div>
+    <div class="cat-name">Azure</div>
+    <div class="cat-desc">Resource deployment, RBAC, subscription, and service errors</div>
+    <div class="cat-footer">
+      <span class="cat-count">89 codes</span>
+      <span class="cat-arrow">→</span>
+    </div>
+    <div class="color-bar"></div>
+  </a>
+
+  <a class="cat-card graph" href="#">
+    <div class="cat-icon">⚡</div>
+    <div class="cat-name">Graph API</div>
+    <div class="cat-desc">API errors, permission failures, throttling, auth token issues</div>
+    <div class="cat-footer">
+      <span class="cat-count">63 codes</span>
+      <span class="cat-arrow">→</span>
+    </div>
+    <div class="color-bar"></div>
+  </a>
+
+  <a class="cat-card licensing" href="#">
+    <div class="cat-icon">🔑</div>
+    <div class="cat-name">Licensing</div>
+    <div class="cat-desc">License assignment failures, subscription errors, SKU conflicts</div>
+    <div class="cat-footer">
+      <span class="cat-count">37 codes</span>
+      <span class="cat-arrow">→</span>
+    </div>
+    <div class="color-bar"></div>
+  </a>
+
+</div>
+
+<div class="stats">
+  <div class="stat">
+    <div class="stat-num">600+</div>
+    <div class="stat-label">Error codes</div>
+  </div>
+  <div class="stat-divider"></div>
+  <div class="stat">
+    <div class="stat-num">8</div>
+    <div class="stat-label">Products covered</div>
+  </div>
+  <div class="stat-divider"></div>
+  <div class="stat">
+    <div class="stat-num">0</div>
+    <div class="stat-label">Logins required</div>
+  </div>
+  <div class="stat-divider"></div>
+  <div class="stat">
+    <div class="stat-num">Tier 1</div>
+    <div class="stat-label">Friendly language</div>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-left">Built by <a href="#">Lauren Grassano</a> &nbsp;·&nbsp; <a href="#">GitHub</a> &nbsp;·&nbsp; <a href="#">LinkedIn</a></div>
+  <div class="footer-right">M365ERRORFINDER · NOT AFFILIATED WITH MICROSOFT</div>
+</footer>
+
+</body>
+</html>
