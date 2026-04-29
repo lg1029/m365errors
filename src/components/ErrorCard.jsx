@@ -24,47 +24,43 @@ export default function ErrorCard({ error, isExpanded, onToggle }) {
     >
       {/* Clickable header */}
       <button
-        className="w-full text-left px-6 py-5 flex items-start justify-between gap-4"
+        className="w-full text-left px-5 py-3.5 flex items-center justify-between gap-4"
         onClick={onToggle}
       >
-        <div className="flex-1 min-w-0">
-          {/* Code + category badge */}
-          <div className="flex items-center flex-wrap gap-2 mb-2">
-            <span className="font-mono text-[15px] font-medium" style={{ color: c.color }}>
-              {error.code}
-            </span>
-            <span
-              className="text-[11px] px-2 py-0.5 rounded-md font-medium"
-              style={{ background: c.bg10, border: `1px solid ${c.border25}`, color: c.color }}
-            >
-              {meta.name}
-            </span>
-          </div>
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          {/* Code */}
+          <span
+            className="font-mono text-[13px] font-semibold shrink-0"
+            style={{ color: c.color, letterSpacing: '0.01em' }}
+          >
+            {error.code}
+          </span>
+
+          {/* Divider */}
+          <span
+            className="shrink-0 w-px h-4 self-center"
+            style={{ background: 'var(--border)' }}
+          />
 
           {/* Title */}
-          <div
-            className="font-semibold text-[16px] mb-1.5"
-            style={{ letterSpacing: '-0.2px', color: 'var(--text)' }}
+          <span
+            className="text-[14px] font-medium truncate"
+            style={{ color: 'var(--text)', letterSpacing: '-0.1px' }}
           >
             {error.title}
-          </div>
-
-          {/* Summary */}
-          <div className="text-sm leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-            {error.summary}
-          </div>
+          </span>
         </div>
 
         {/* Chevron */}
         <div
-          className="shrink-0 mt-1 w-6 h-6 flex items-center justify-center rounded-full transition-transform duration-300"
+          className="shrink-0 w-5 h-5 flex items-center justify-center rounded-full transition-transform duration-300"
           style={{
             background: 'var(--bg2)',
             color: 'var(--text-muted)',
             transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
           }}
         >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
             <path
               d="M2 4L6 8L10 4"
               stroke="currentColor"
@@ -85,10 +81,23 @@ export default function ErrorCard({ error, isExpanded, onToggle }) {
           transition: 'max-height 0.4s ease, opacity 0.3s ease',
         }}
       >
-        <div className="px-6 pb-6" style={{ borderTop: '1px solid var(--border)' }}>
+        <div className="px-5 pb-5" style={{ borderTop: '1px solid var(--border)' }}>
+
+          {/* Summary + category badge */}
+          <div className="mt-4 mb-4 flex items-start gap-2 flex-wrap">
+            <span
+              className="text-[11px] px-2 py-0.5 rounded-md font-medium shrink-0 mt-[1px]"
+              style={{ background: c.bg10, border: `1px solid ${c.border25}`, color: c.color }}
+            >
+              {meta.name}
+            </span>
+            <p className="text-sm leading-relaxed" style={{ color: 'var(--text-muted)', flex: 1, minWidth: 0 }}>
+              {error.summary}
+            </p>
+          </div>
 
           {/* What this means */}
-          <div className="mt-5 mb-4">
+          <div className="mb-4">
             <div
               className="text-[11px] uppercase tracking-[0.1em] font-semibold mb-2"
               style={{ color: 'var(--text-muted)' }}

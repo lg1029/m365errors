@@ -8,6 +8,7 @@ import CategoryGrid from './components/CategoryGrid'
 import CategoryView from './components/CategoryView'
 import StatsRow from './components/StatsRow'
 import Footer from './components/Footer'
+import SubmitError from './components/SubmitError'
 
 export default function App() {
   const [query, setQuery] = useState('')
@@ -29,6 +30,12 @@ export default function App() {
     window.scrollTo(0, 0)
   }
 
+  const handleSubmitView = () => {
+    setView('submit')
+    setQuery('')
+    window.scrollTo(0, 0)
+  }
+
   const handleSearchSelect = (error) => {
     setQuery('')
     setView('category')
@@ -45,9 +52,11 @@ export default function App() {
 
   return (
     <>
-      <Navbar onHome={handleBack} />
+      <Navbar onHome={handleBack} onSubmit={handleSubmitView} />
 
-      {view === 'category' ? (
+      {view === 'submit' ? (
+        <SubmitError onBack={handleBack} />
+      ) : view === 'category' ? (
         <CategoryView
           category={activeCategory}
           errors={errors}

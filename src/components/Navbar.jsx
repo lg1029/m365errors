@@ -1,4 +1,4 @@
-export default function Navbar({ onHome }) {
+export default function Navbar({ onHome, onSubmit }) {
   return (
     <nav
       className="sticky top-0 z-10 flex items-center justify-between border-b"
@@ -34,18 +34,41 @@ export default function Navbar({ onHome }) {
         ))}
       </ul>
 
-      <div
-        className="font-mono font-semibold tracking-[0.04em]"
-        style={{
-          fontSize: '11px',
-          padding: '4px 10px',
-          borderRadius: '6px',
-          background: 'var(--bg2)',
-          border: '1px solid var(--border)',
-          color: 'var(--text-muted)',
-        }}
-      >
-        v1.0
+      <div className="flex items-center gap-3">
+        <button
+          onClick={onSubmit}
+          style={{
+            fontSize: '13px',
+            fontWeight: 600,
+            padding: '7px 14px',
+            borderRadius: '8px',
+            background: '#7C3AED',
+            color: '#ffffff',
+            border: 'none',
+            cursor: 'pointer',
+            letterSpacing: '-0.1px',
+            transition: 'background 0.15s',
+            fontFamily: "'Inter', sans-serif",
+          }}
+          onMouseOver={e => e.currentTarget.style.background = '#6D28D9'}
+          onMouseOut={e => e.currentTarget.style.background = '#7C3AED'}
+        >
+          + Submit an Error
+        </button>
+
+        <div
+          className="font-mono font-semibold tracking-[0.04em]"
+          style={{
+            fontSize: '11px',
+            padding: '4px 10px',
+            borderRadius: '6px',
+            background: 'var(--bg2)',
+            border: '1px solid var(--border)',
+            color: 'var(--text-muted)',
+          }}
+        >
+          v1.0
+        </div>
       </div>
     </nav>
   )

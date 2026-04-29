@@ -169,10 +169,10 @@ body {
 .error-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 10px;
   overflow: hidden;
   transition: border-color 0.15s, box-shadow 0.15s;
-  margin-bottom: 10px;
+  margin-bottom: 5px;
   scroll-margin-top: 80px;
 }
 
@@ -229,6 +229,13 @@ body {
   border-color: var(--border-hover);
   color: var(--text);
   background: var(--bg2);
+}
+
+/* Submit form inputs focus */
+.submit-input:focus {
+  border-color: #7C3AED;
+  box-shadow: 0 0 0 3px rgba(124,58,237,0.1);
+  outline: none;
 }
 
 /* Responsive */
