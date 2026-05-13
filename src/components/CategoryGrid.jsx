@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import CategoryTile from './CategoryTile'
 
 const CATEGORY_ORDER = [
-  'entra', 'intune', 'exchange', 'autopilot',
+  'entra', 'intune', 'intune_apps', 'exchange', 'autopilot',
   'purview', 'azure', 'graph', 'licensing',
   'sharepoint', 'onedrive', 'teams', 'm365apps',
 ]

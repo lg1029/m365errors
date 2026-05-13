@@ -11,6 +11,7 @@ export const CATEGORY_COLORS = {
   onedrive:   { color: '#0557A5', light: '#0557A5', glow: 'rgba(5,87,165,0.12)',    bg10: '#E0EBF8', bg15: '#E0EBF8', border25: '#7AAED9' },
   teams:      { color: '#5B5EA6', light: '#5B5EA6', glow: 'rgba(91,94,166,0.12)',   bg10: '#EEEEFF', bg15: '#EEEEFF', border25: '#BEBEF0' },
   m365apps:   { color: '#D83B01', light: '#D83B01', glow: 'rgba(216,59,1,0.12)',    bg10: '#FDE8E0', bg15: '#FDE8E0', border25: '#F9B8A0' },
+  intune_apps: { color: '#0369A1', light: '#0369A1', glow: 'rgba(3,105,161,0.12)',  bg10: '#E0F2FE', bg15: '#E0F2FE', border25: '#7DD3FC' },
 };
 
 export const CATEGORY_META = {
@@ -26,6 +27,7 @@ export const CATEGORY_META = {
   onedrive:   { name: 'OneDrive',    icon: '📂', desc: 'Sync failures, file conflicts, storage quota, and invalid file name errors' },
   teams:      { name: 'Teams',       icon: '💬', desc: 'Sign-in failures, connection errors, license blocks, and policy issues' },
   m365apps:   { name: 'M365 Apps',   icon: '📝', desc: 'Office activation errors, license deactivation, update failures' },
+  intune_apps: { name: 'Intune Apps', icon: '📦', desc: 'App deployment failures, packaging errors, VPP licensing, and install blocks across Windows, iOS, and Android' },
 };
 
 export const REDDIT_SUBS = {
@@ -41,6 +43,7 @@ export const REDDIT_SUBS = {
   onedrive:   'onedrive',
   teams:      'MicrosoftTeams',
   m365apps:   'sysadmin',
+  intune_apps: 'Intune',
 };
 
 export const errors = [
@@ -347,6 +350,7 @@ export const errors = [
       'Internet connection was slow, unstable, or dropped during setup',
       'A required app or policy took longer to install than expected',
       'Device couldn\'t reach Microsoft\'s servers — sometimes a firewall or network restriction is to blame',
+      'Device doesn\'t have a TPM 2.0 chip, or the TPM is disabled in BIOS/UEFI — required for self-deploying and pre-provisioning profiles',
     ],
     whatToTry: [
       'Make sure the device is on a stable internet connection — wired is better than WiFi during setup if possible',
@@ -1410,5 +1414,360 @@ export const errors = [
       'Contact IT if your organization uses Conditional Access — a policy may be blocking desktop app activation',
     ],
     learnUrl: 'https://support.microsoft.com/en-us/office/unlicensed-product-and-activation-errors-in-office-0d23d3c0-c19c-4b2f-9845-5344fedc4380',
+  },
+
+  // ── Intune Apps ────────────────────────────────────────────────────────────
+  // Windows Packaging
+  {
+    id: 'intune_apps_0x80073cf0',
+    code: '0x80073CF0',
+    category: 'intune_apps',
+    title: 'App package is unsigned or signature is invalid',
+    summary: 'Intune rejected the app package because it lacks a valid digital signature.',
+    whatItMeans: 'Windows requires all app packages (.msix/.appx) to be signed with a trusted certificate before they can be installed. This error means the package Intune tried to deploy either has no signature at all, or the signature can\'t be verified — so Windows blocked the install as a security measure.',
+    whyItHappens: [
+      'The .msix or .appx file was packaged without code-signing',
+      'The signing certificate isn\'t trusted on the target device',
+      'The package was modified after signing, breaking the signature',
+      'A self-signed certificate was used but hasn\'t been deployed to the device\'s trusted store',
+    ],
+    whatToTry: [
+      'Re-sign the package with a certificate from a trusted CA, or deploy the signing cert to devices first via Intune',
+      'If using a self-signed cert, create a Device Configuration profile to push it to the Trusted Root Certification Authorities store',
+      'Use Microsoft\'s MSIX Packaging Tool to repackage and sign the app correctly',
+      'Verify the package hasn\'t been altered after signing by checking its hash',
+    ],
+    learnUrl: 'https://learn.microsoft.com/en-us/mem/intune/apps/troubleshoot-app-install',
+  },
+  {
+    id: 'intune_apps_0x80073cf3',
+    code: '0x80073CF3',
+    category: 'intune_apps',
+    title: 'Package conflict, dependency, or architecture mismatch',
+    summary: 'The app package can\'t be staged because of a version conflict, missing dependency, or wrong CPU architecture.',
+    whatItMeans: 'Windows tried to prepare the app package for installation but hit a compatibility wall. This usually means the package conflicts with an existing installation, is missing a required dependency (like a framework package), or was compiled for a different processor architecture than the device running it.',
+    whyItHappens: [
+      'A newer version of the app is already installed and the package doesn\'t support downgrades',
+      'A required dependency (e.g., Microsoft.VCLibs, .NET runtime) isn\'t present on the device',
+      'The package targets x64 but the device is ARM64, or vice versa',
+      'The package family name conflicts with a Store version of the same app already installed',
+    ],
+    whatToTry: [
+      'Check whether a conflicting version is installed — uninstall it before redeploying',
+      'Add all dependency packages to the Intune app alongside the main package',
+      'Ensure you\'re deploying the correct architecture variant (x64, x86, ARM64) for the target device fleet',
+      'In Intune admin center: Apps > [App] > Properties — verify dependencies are listed under "Dependencies"',
+    ],
+    learnUrl: 'https://learn.microsoft.com/en-us/mem/intune/apps/troubleshoot-app-install',
+  },
+  {
+    id: 'intune_apps_0x80073cfb',
+    code: '0x80073CFB',
+    category: 'intune_apps',
+    title: 'Package already installed — reinstall blocked by Windows',
+    summary: 'Windows detected the exact same package version is already installed and refused to reinstall it.',
+    whatItMeans: 'Windows App Deployment considers this a no-op: the package with this exact version and publisher is already on the device. It won\'t reinstall over itself. This can appear as an Intune "install failure" even though the app is actually present and working.',
+    whyItHappens: [
+      'Intune is pushing the same version that\'s already installed (common after re-enrollment)',
+      'The app was installed via another channel (manual, SCCM, Store) at the same version',
+      'Intune detects install failure but the app is actually functional on the device',
+    ],
+    whatToTry: [
+      'Verify the app is actually present and working on the device before treating this as a real failure',
+      'If a fresh install is truly needed, uninstall the existing version first — either via Intune script or manually',
+      'Increment the package version number in the manifest to allow a reinstall over the existing copy',
+      'Check Intune detection rules — if they confirm the app is installed, the error can be safely ignored',
+    ],
+    learnUrl: 'https://learn.microsoft.com/en-us/mem/intune/apps/troubleshoot-app-install',
+  },
+  {
+    id: 'intune_apps_0x80073cff',
+    code: '0x80073CFF',
+    category: 'intune_apps',
+    title: 'Sideloading not enabled on this device',
+    summary: 'The device\'s policy doesn\'t allow installing apps from outside the Microsoft Store.',
+    whatItMeans: 'Deploying .msix or .appx packages through Intune is a form of sideloading — installing apps that don\'t come directly from the Microsoft Store. This error means the device\'s policy blocks that. On modern Windows 10/11 with Developer Mode or the correct MDM policy, sideloading is allowed by default for managed devices.',
+    whyItHappens: [
+      'The "Allow all trusted apps to install" group policy or MDM policy isn\'t enabled',
+      'The device is running an edition of Windows that restricts sideloading (e.g., S Mode)',
+      'A security baseline is explicitly disabling sideloading',
+      'The device is Windows 10 older than 1607 and sideloading wasn\'t enabled during setup',
+    ],
+    whatToTry: [
+      'In Intune: create a Device Configuration profile with the "Allow all trusted apps to install" setting enabled',
+      'Check whether the device is running Windows 10/11 in S Mode — sideloading is not supported in S Mode without switching out of it',
+      'Review any applied security baselines for policies that restrict app installation',
+      'For Windows 11 22H2+, sideloading is on by default for managed devices — confirm the OS version',
+    ],
+    learnUrl: 'https://learn.microsoft.com/en-us/mem/intune/apps/troubleshoot-app-install',
+  },
+
+  // iOS / VPP
+  {
+    id: 'intune_apps_0x87d13b7e',
+    code: '0x87D13B7E',
+    category: 'intune_apps',
+    title: 'No VPP licenses remaining for this app',
+    summary: 'Intune couldn\'t assign an app because all purchased VPP licenses are in use.',
+    whatItMeans: 'Your organization bought a set number of app licenses through Apple\'s Volume Purchase Program (VPP). All of them are currently assigned to other users or devices. Until a license is freed up or more are purchased, no new assignments can succeed.',
+    whyItHappens: [
+      'All VPP licenses for this app have been consumed',
+      'Licenses are assigned to devices or users that no longer need them and haven\'t been reclaimed',
+      'The org grew faster than the license count anticipated',
+    ],
+    whatToTry: [
+      'In Intune admin center: Apps > iOS/iPadOS apps > [App] > Overview — check "Installed" vs total license count',
+      'Revoke licenses from users or devices that no longer need the app to free them up',
+      'Purchase additional licenses through Apple Business Manager and sync your VPP token in Intune',
+      'Intune > Tenant administration > Connectors and tokens > Apple VPP tokens — trigger a sync after purchasing',
+    ],
+    learnUrl: 'https://learn.microsoft.com/en-us/mem/intune/apps/vpp-apps-ios',
+  },
+  {
+    id: 'intune_apps_0x87d1313d',
+    code: '0x87D1313D',
+    category: 'intune_apps',
+    title: 'VPP license couldn\'t be retrieved from the iTunes Store',
+    summary: 'Intune failed to pull a VPP license from Apple\'s servers during app assignment.',
+    whatItMeans: 'When Intune assigns a VPP app to a user or device, it contacts Apple\'s servers to claim a license. This error means that request failed — Apple\'s side didn\'t return a license. It\'s usually a connectivity or token sync issue rather than a license shortage.',
+    whyItHappens: [
+      'The VPP token in Intune has expired and hasn\'t been renewed',
+      'Apple\'s VPP service is temporarily unavailable',
+      'The Intune service account lost access to Apple Business Manager',
+      'Network connectivity between Intune and Apple\'s servers is blocked',
+    ],
+    whatToTry: [
+      'Check the VPP token status: Intune > Tenant administration > Connectors and tokens > Apple VPP tokens',
+      'Renew or re-upload the VPP token if it shows as expired',
+      'Trigger a manual sync of the VPP token and wait 15 minutes before retrying',
+      'Check Apple System Status for any ongoing VPP service incidents',
+    ],
+    learnUrl: 'https://learn.microsoft.com/en-us/mem/intune/apps/vpp-apps-ios',
+  },
+  {
+    id: 'intune_apps_0x87d13b62',
+    code: '0x87D13B62',
+    category: 'intune_apps',
+    title: 'User declined the app install prompt',
+    summary: 'The device user tapped "Don\'t Install" when iOS asked permission to install the app.',
+    whatItMeans: 'Intune pushed an app to this iOS device as "Available" (not required), and when iOS displayed the install prompt, the user chose not to install it. This is expected user behavior for available apps — it\'s not a system error.',
+    whyItHappens: [
+      'App was deployed as "Available" rather than "Required", giving the user a choice',
+      'User dismissed or declined the installation prompt on the device',
+    ],
+    whatToTry: [
+      'If the app must be on every device, change the assignment type to "Required" in Intune — this removes user choice',
+      'For Available apps, communicate to users why the app is needed and ask them to install it from Company Portal',
+      'No action needed from IT if the deployment intent is optional',
+    ],
+    learnUrl: 'https://learn.microsoft.com/en-us/mem/intune/apps/troubleshoot-app-install',
+  },
+  {
+    id: 'intune_apps_0x87d13b63',
+    code: '0x87D13B63',
+    category: 'intune_apps',
+    title: 'User declined the app update prompt',
+    summary: 'The device user dismissed the prompt to update an already-installed app to the newer version.',
+    whatItMeans: 'Intune pushed an updated version of an app to this iOS device, but when iOS asked the user whether to update, they said no. Like 0x87D13B62, this only occurs when the update assignment allows user choice.',
+    whyItHappens: [
+      'The app update is assigned as "Available" rather than "Required"',
+      'User dismissed or declined the update prompt',
+    ],
+    whatToTry: [
+      'Change the app assignment to "Required" if the update is mandatory for security or compatibility',
+      'Communicate the reason for the update to users through your normal channels',
+      'Required assignments on supervised devices will enforce the update without user interaction',
+    ],
+    learnUrl: 'https://learn.microsoft.com/en-us/mem/intune/apps/troubleshoot-app-install',
+  },
+  {
+    id: 'intune_apps_0x87d11388',
+    code: '0x87D11388',
+    category: 'intune_apps',
+    title: 'iOS device is locked or busy — install deferred',
+    summary: 'The app install command arrived while the device was locked or occupied with another process.',
+    whatItMeans: 'iOS received the Intune command to install an app, but the device was in a state where it couldn\'t act on it immediately — the screen was locked, the device was in use, or another MDM command was being processed. The install will typically retry automatically.',
+    whyItHappens: [
+      'Device screen was locked when Intune sent the install command',
+      'Device was actively in use and iOS deferred the background install',
+      'Another MDM operation was in progress at the same time',
+    ],
+    whatToTry: [
+      'Wait — Intune will automatically retry the install on the next check-in cycle',
+      'Unlock the device and open the Company Portal app to trigger a manual sync',
+      'If the error persists after several hours, force a sync from Intune admin center: Devices > [Device] > Sync',
+    ],
+    learnUrl: 'https://learn.microsoft.com/en-us/mem/intune/apps/troubleshoot-app-install',
+  },
+  {
+    id: 'intune_apps_0x87d13b94',
+    code: '0x87D13B94',
+    category: 'intune_apps',
+    title: 'App Store is disabled on this device',
+    summary: 'The App Store has been turned off by a policy, blocking the app installation.',
+    whatItMeans: 'An Intune or Apple Configurator restriction policy has disabled the App Store on this device. Because VPP and non-supervised app deployments route through the App Store mechanism, any install that requires it will fail until the restriction is lifted.',
+    whyItHappens: [
+      'An Intune device restriction profile has "App Store" set to Blocked',
+      'A supervised device has an App Store restriction applied via Apple Configurator or an MDM profile',
+      'A compliance or security policy intentionally restricts the App Store for certain device groups',
+    ],
+    whatToTry: [
+      'In Intune: Device configuration > [Restriction profile] > App Store — check whether it\'s blocked',
+      'If App Store must stay disabled, use Supervised mode with a managed app deployment method instead',
+      'For supervised devices, VPP managed app installs can bypass the App Store restriction — verify the deployment type',
+      'Review the restriction profile scope to ensure it\'s not hitting devices it wasn\'t intended for',
+    ],
+    learnUrl: 'https://learn.microsoft.com/en-us/mem/intune/configuration/device-restrictions-ios',
+  },
+  {
+    id: 'intune_apps_0x87d13b97',
+    code: '0x87D13B97',
+    category: 'intune_apps',
+    title: 'Device is in Lost Mode — app install blocked',
+    summary: 'App deployment is blocked because the device has been placed in Lost Mode via Intune.',
+    whatItMeans: 'Lost Mode is an Intune feature for supervised iOS devices that locks the device and displays contact information when it\'s reported lost or stolen. While a device is in Lost Mode, all app installs and most MDM management actions are suspended.',
+    whyItHappens: [
+      'Lost Mode was enabled in Intune (Devices > [Device] > Lost mode) and hasn\'t been turned off',
+      'The device was reported lost or stolen and the MDM action was applied',
+    ],
+    whatToTry: [
+      'In Intune admin center: Devices > [Device] > Lost mode — disable Lost Mode once the device is recovered',
+      'After disabling Lost Mode, trigger a sync and retry the app deployment',
+      'If the device is truly lost, Lost Mode should stay on — recover the device before re-deploying apps',
+    ],
+    learnUrl: 'https://learn.microsoft.com/en-us/mem/intune/remote-actions/device-lost-mode',
+  },
+  {
+    id: 'intune_apps_0x87d13b80',
+    code: '0x87D13B80',
+    category: 'intune_apps',
+    title: 'Cannot connect to the iTunes Store',
+    summary: 'The iOS device couldn\'t reach Apple\'s servers to complete the app installation.',
+    whatItMeans: 'The app install process requires the device to connect to Apple\'s iTunes Store or VPP infrastructure. This error means that connection failed — usually a network issue on the device side or a firewall blocking Apple\'s CDN.',
+    whyItHappens: [
+      'The device is on a network that blocks access to Apple\'s servers (itunes.apple.com, *.mzstatic.com)',
+      'The device has no active internet connection',
+      'Apple\'s services are temporarily down',
+      'A proxy or content filter is intercepting HTTPS traffic to Apple\'s CDN',
+    ],
+    whatToTry: [
+      'Verify the device can reach the internet and browse normal websites',
+      'Check that Apple\'s required hostnames are whitelisted on the network firewall (see Apple\'s network requirements documentation)',
+      'Try the installation on a different network (e.g., switch from corporate Wi-Fi to cellular) to isolate network vs. device issues',
+      'Check Apple System Status for any service outages affecting the iTunes Store',
+    ],
+    learnUrl: 'https://learn.microsoft.com/en-us/mem/intune/apps/troubleshoot-app-install',
+  },
+
+  // Android
+  {
+    id: 'intune_apps_0xc7d14fb1',
+    code: '0xC7D14FB1',
+    category: 'intune_apps',
+    title: 'User canceled the Android app installation',
+    summary: 'The app install failed because the device user dismissed the installation dialog.',
+    whatItMeans: 'Intune sent an install command to this Android device, but when the system showed the installation confirmation dialog, the user tapped "Cancel." For non-required apps, this is expected behavior.',
+    whyItHappens: [
+      'App is deployed as "Available" and the user chose not to install it',
+      'User dismissed the dialog unexpectedly or tapped the wrong button',
+    ],
+    whatToTry: [
+      'If the app is mandatory, change the assignment to "Required" in Intune to enforce silent installation on managed devices',
+      'For Android Enterprise fully managed or dedicated devices, Required apps install silently without user prompts',
+      'Communicate the app\'s purpose to users and ask them to install it from the Company Portal',
+    ],
+    learnUrl: 'https://learn.microsoft.com/en-us/mem/intune/apps/troubleshoot-app-install',
+  },
+  {
+    id: 'intune_apps_0xc7d14fb5',
+    code: '0xC7D14FB5',
+    category: 'intune_apps',
+    title: 'Android app failed to install — cause unknown',
+    summary: 'The installation failed on the Android device for an unspecified reason.',
+    whatItMeans: 'Android returned a generic installation failure code with no specific cause. This catch-all error can stem from storage problems, interrupted downloads, package corruption, or device-specific issues. It requires some detective work to narrow down.',
+    whyItHappens: [
+      'Insufficient storage space on the device',
+      'The APK download was interrupted or corrupted in transit',
+      'A conflicting version of the app is already installed from a different source',
+      'Device-specific compatibility issue (older Android version, unsupported ABI)',
+      'Work profile is in a bad state and needs to be re-provisioned',
+    ],
+    whatToTry: [
+      'Check available storage on the device — Android needs free space roughly 2× the app size for installation',
+      'Clear the cache of the Google Play Store and Google Play Services apps on the device, then retry',
+      'Uninstall any existing version of the app from outside the managed profile and retry',
+      'Check the Intune device logs via Company Portal > Logs > Send logs to capture detailed error output',
+      'If the issue affects only one device, consider re-enrolling — a work profile re-provision often resolves persistent install failures',
+    ],
+    learnUrl: 'https://learn.microsoft.com/en-us/mem/intune/apps/troubleshoot-app-install',
+  },
+  {
+    id: 'intune_apps_0xc7d14fb7',
+    code: '0xC7D14FB7',
+    category: 'intune_apps',
+    title: 'APK signature mismatch — upgrade blocked by Android',
+    summary: 'Android refused to upgrade the app because the new APK was signed with a different certificate than the installed version.',
+    whatItMeans: 'Android enforces that all updates to an installed app must be signed by the same certificate as the original. If the signing certificate changed between versions — for example, after a developer key rotation or repackaging — Android will reject the upgrade entirely. The only resolution is to uninstall the existing version first.',
+    whyItHappens: [
+      'The app was re-signed with a new certificate between versions',
+      'IT repackaged the APK (e.g., via app wrapping) and the wrapping key changed',
+      'The production signing key was rotated or the app moved to a new publisher',
+      'Different versions of the app came from different distribution channels (sideload vs. managed Play)',
+    ],
+    whatToTry: [
+      'Uninstall the existing app version from the device first, then redeploy via Intune',
+      'If this affects many devices, create an Intune uninstall assignment targeting the app, then redeploy',
+      'Ensure future app builds use the same signing certificate consistently to avoid recurrence',
+      'For Android Enterprise, use Managed Google Play to let Google handle signature enforcement and key management',
+    ],
+    learnUrl: 'https://learn.microsoft.com/en-us/mem/intune/apps/troubleshoot-app-install',
+  },
+
+  // ── Autopilot (additions) ──────────────────────────────────────────────────
+  {
+    id: 'autopilot_0x801c03ea',
+    code: '0x801C03EA',
+    category: 'autopilot',
+    title: 'TPM attestation failed during Autopilot self-deploying',
+    summary: 'The device\'s TPM chip couldn\'t prove its identity to Microsoft — Autopilot self-deploying mode requires this.',
+    whatItMeans: 'Autopilot self-deploying mode and pre-provisioning (white glove) rely on the device\'s TPM 2.0 chip to cryptographically prove that the hardware is genuine and unmodified. This process is called TPM attestation. If it fails, the deployment stops — Microsoft won\'t provision a device it can\'t verify.',
+    whyItHappens: [
+      'The device\'s TPM 2.0 firmware is outdated and doesn\'t support the required attestation protocol',
+      'The TPM is present but disabled in BIOS/UEFI settings',
+      'The device is a virtual machine — most VMs don\'t have a real TPM and can\'t complete attestation',
+      'The device couldn\'t reach the Windows Autopilot cloud service endpoints during attestation (network/firewall issue)',
+      'TPM was recently cleared or reset, requiring a new attestation cycle',
+    ],
+    whatToTry: [
+      'Verify TPM 2.0 is enabled in BIOS/UEFI and the firmware is up to date',
+      'Check that the device can reach required Autopilot endpoints — see Microsoft\'s network requirements documentation',
+      'Run TPM diagnostics: open PowerShell as admin and run `Get-Tpm` — verify TpmPresent and TpmReady are both True',
+      'Update the TPM firmware from the manufacturer\'s support site (Dell, HP, Lenovo, etc.)',
+      'If the device is a VM, switch to a profile type that doesn\'t require TPM attestation (user-driven mode)',
+    ],
+    learnUrl: 'https://learn.microsoft.com/en-us/autopilot/troubleshooting-faq',
+  },
+
+  // ── Intune (additions) ─────────────────────────────────────────────────────
+  {
+    id: 'intune_0xc1036501',
+    code: '0xC1036501',
+    category: 'intune',
+    title: 'Multiple MDM configurations detected in Entra ID',
+    summary: 'The device can\'t enroll because Entra ID has conflicting MDM authority settings.',
+    whatItMeans: 'Entra ID found more than one MDM configuration that could apply to this user or device — for example, both an Intune scope and a third-party MDM scope are active at the same time. Windows doesn\'t know which MDM authority to use, so enrollment fails.',
+    whyItHappens: [
+      'Both Intune and a third-party MDM (e.g., Workspace ONE, MobileIron) are configured with overlapping user or group scopes',
+      'A leftover MDM enrollment URL from a previous MDM solution is still registered in Entra ID',
+      'The MDM and MAM user scopes in Entra ID > Mobility (MDM and MAM) overlap for this user',
+      'A co-management configuration conflict between SCCM and Intune',
+    ],
+    whatToTry: [
+      'In Entra admin center: Mobility (MDM and MAM) — review all MDM applications and their user scopes for conflicts',
+      'Remove or narrow the scope of any MDM entries that shouldn\'t apply to this user or device',
+      'If migrating from another MDM to Intune, ensure the old MDM entry is removed or its scope is set to None',
+      'Contact Microsoft Support if you\'re running a hybrid SCCM + Intune co-management setup with this error',
+    ],
+    learnUrl: 'https://learn.microsoft.com/en-us/mem/intune/enrollment/troubleshoot-windows-enrollment-errors',
   },
 ];

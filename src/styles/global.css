@@ -120,6 +120,7 @@ body {
 .cat-onedrive::before   { background: #0557A5; }
 .cat-teams::before      { background: #5B5EA6; }
 .cat-m365apps::before   { background: #D83B01; }
+.cat-intune_apps::before { background: #0369A1; }
 
 .cat-entra:hover      { border-color: #DDD6FE !important; }
 .cat-intune:hover     { border-color: #BFDBFE !important; }
@@ -133,6 +134,7 @@ body {
 .cat-onedrive:hover   { border-color: #7AAED9  !important; }
 .cat-teams:hover      { border-color: #BEBEF0  !important; }
 .cat-m365apps:hover   { border-color: #F9B8A0  !important; }
+.cat-intune_apps:hover { border-color: #7DD3FC  !important; }
 
 /* Arrow on tile */
 .cat-arrow {
