@@ -1,4 +1,4 @@
-<img width="1623" height="675" alt="365errors" src="https://github.com/user-attachments/assets/f69c4cde-af7f-4620-a046-264b92ca1420" />
+<img width="1621" height="671" alt="365" src="https://github.com/user-attachments/assets/064ae89d-9e50-41b3-a3d6-665caaa10ae0" />
 
 # M365ErrorFinder
 
